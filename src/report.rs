@@ -91,28 +91,56 @@ pub enum FindingSeverity {
 pub enum TestId {
     /// Modulus length.
     ModulusSize,
+
     /// Public exponent.
     PublicExponent,
+
     /// Ones/zeros balance.
     BitBalance,
+
     /// Shannon entropy.
     ShannonEntropy,
+
     /// Monobit frequency.
     Monobit,
+
     /// Long zero run.
     LongZeroRun,
+
     /// Long one run.
     LongOneRun,
+
     /// Repeated blocks.
     RepeatedBlocks,
+
     /// Sparse byte windows.
     SparseWindow,
+
     /// Trial division small factor.
     SmallFactor,
+
     /// Fermat close-prime screen.
     FermatNearSquare,
+
     /// Shared prime / shared factor with corpus.
     SharedFactor,
+
+    /// RSA public key appears vulnerable to Wiener's small-private-exponent attack.
+    WienerSmallPrivateExponent,
+
+    /// RSA modulus has a sparse limb pattern consistent with short-sleeve RSA keys.
+    ShortSleeveRsaPattern,
+
+    /// RSA modulus has confirmed polynomial / structured factorization behavior.
+    PolynomialRsaStructure,
+    // /// RSA public key matched a known-bad key blocklist.
+    //KnownBadKeyBlocklist,
+
+    // /// RSA public key matched a Fortinet / Fortigate leak blocklist.
+    //FortinetFortigateLeak,
+
+    // /// RSA public key matched a keypair / GitKraken CVE-2021-41117 blocklist.
+    //KeypairGitkrakenCve202141117,
 }
 
 /// Evidence key/value attached to a finding.

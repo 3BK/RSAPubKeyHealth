@@ -16,12 +16,15 @@
 mod math;
 mod parser;
 mod report;
+mod short_sleeve;
 mod tests;
+mod wiener;
 
 pub use parser::{PublicKeyMaterial, parse_rsa_public_key_der, parse_rsa_public_key_pem};
 pub use report::{ComplianceControl, Finding, FindingSeverity, HealthReport, HealthStatus, TestId};
 pub use tests::{AuditPolicy, SharedFactorFinding};
 
+use crate::math::BigExt;
 use crate::report::{FindingEvidence, Framework};
 use sha2::{Digest, Sha256};
 
@@ -68,6 +71,9 @@ pub fn analyze_material(material: &PublicKeyMaterial, policy: &AuditPolicy<'_>) 
     let fermat = math::fermat_near_square_screen(n, policy.fermat_iterations);
     let shared = tests::shared_factor_scan(n, policy.shared_moduli);
 
+    let n_big = math::Big::from_be(material.modulus.as_slice());
+    let e_big = math::Big::from_be(material.exponent.as_slice());
+
     if bit_len < policy.minimum_modulus_bits {
         findings.push(Finding::new(
             TestId::ModulusSize,
@@ -105,7 +111,7 @@ pub fn analyze_material(material: &PublicKeyMaterial, policy: &AuditPolicy<'_>) 
     if entropy < policy.minimum_shannon_entropy_bits_per_byte {
         findings.push(Finding::new(
             TestId::ShannonEntropy,
-            FindingSeverity::High,
+            FindingSeverity::Low,
             format!("Byte Shannon entropy is below policy floor: {entropy:.6} bits/byte"),
             FindingEvidence::new("entropy_bits_per_byte", format!("{entropy:.8}")),
         ));
@@ -198,6 +204,45 @@ pub fn analyze_material(material: &PublicKeyMaterial, policy: &AuditPolicy<'_>) 
         ));
     }
 
+    if policy.enable_wiener_attack_check {
+        if let Some(result) = wiener::wiener_attack(&n_big, &e_big) {
+            findings.push(Finding::new(
+                TestId::WienerSmallPrivateExponent,
+                FindingSeverity::Critical,
+                "RSA public key is vulnerable to Wiener's small-private-exponent attack"
+                    .to_string(),
+                FindingEvidence::new(
+                    "wiener_recovery",
+                    format!(
+                        "d_bits={}, p_bits={}, q_bits={}",
+                        result.d.bits(),
+                        result.p.bits(),
+                        result.q.bits()
+                    ),
+                ),
+            ));
+        }
+    }
+
+    for limb_bits in policy.short_sleeve_limb_bits {
+        if let Some(hit) = short_sleeve::scan_short_sleeve_pattern(
+            material.modulus.as_slice(),
+            *limb_bits,
+            policy.short_sleeve_max_nonzero_bytes_per_limb,
+            policy.short_sleeve_minimum_sparse_ratio,
+        ) {
+            findings.push(Finding::new(
+                TestId::ShortSleeveRsaPattern,
+                FindingSeverity::High,
+                format!(
+                    "RSA modulus has sparse limb pattern consistent with short-sleeve RSA: \
+                     {} sparse limbs out of {} at {}-bit limb width",
+                    hit.sparse_limbs, hit.limbs, hit.limb_bits
+                ),
+                FindingEvidence::new("sparse_ratio", format!("{:.6}", hit.sparse_ratio)),
+            ));
+        }
+    }
     let status = HealthStatus::from_findings(&findings);
     let spki_sha256 = Sha256::digest(material.subject_public_key_der.as_slice());
 

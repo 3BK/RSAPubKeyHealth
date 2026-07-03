@@ -1,5 +1,3 @@
-use rsa::pkcs1::{DecodeRsaPublicKey, EncodeRsaPublicKey};
-use rsa::traits::PublicKeyParts;
 use rsa::{RsaPrivateKey, RsaPublicKey};
 use rsa_pub_key_health::{AuditPolicy, HealthStatus, analyze_pem};
 
@@ -54,7 +52,7 @@ fn generated_key_analyzes() {
     std::io::stderr().flush().unwrap();
     let public = RsaPublicKey::from(&private);
 
-    use rsa::pkcs1::{DecodeRsaPublicKey, EncodeRsaPublicKey};
+    use rsa::pkcs1::EncodeRsaPublicKey;
 
     eprintln!("[INFO] Encoding public key to PEM...");
     std::io::stderr().flush().unwrap();

@@ -28,7 +28,7 @@ A public RSA key does not expose `p` and `q`. Therefore, a public-key-only scann
 ## Example
 
 ```rust
-use rsa_key_health::{analyze_pem, AuditPolicy};
+use rsa_pub_key_health::{analyze_pem, AuditPolicy};
 
 let pem = std::fs::read_to_string("public.pem")?;
 let report = analyze_pem(&pem, &AuditPolicy::default())?;

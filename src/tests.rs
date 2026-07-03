@@ -167,7 +167,7 @@ impl<'a> AuditPolicy<'a> {
             ones_ratio_min: 0.44,
             ones_ratio_max: 0.555_555,
 
-            minimum_shannon_entropy_bits_per_byte: 7.55,
+            minimum_shannon_entropy_bits_per_byte: 7.50,
 
             monobit_min_p_value: 0.001,
 

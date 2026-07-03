@@ -21,7 +21,11 @@ mod tests;
 mod wiener;
 
 pub use parser::{PublicKeyMaterial, parse_rsa_public_key_der, parse_rsa_public_key_pem};
-pub use report::{ComplianceControl, Finding, FindingSeverity, HealthReport, HealthStatus, TestId};
+pub use report::{
+    ComplianceControl, Finding, FindingSeverity, HealthReport, HealthStatus, ShortSleeveStatistics,
+    TestId, WienerStatistics,
+};
+
 pub use tests::{AuditPolicy, SharedFactorFinding};
 
 use crate::math::BigExt;
@@ -73,6 +77,17 @@ pub fn analyze_material(material: &PublicKeyMaterial, policy: &AuditPolicy<'_>) 
 
     let n_big = math::Big::from_be(material.modulus.as_slice());
     let e_big = math::Big::from_be(material.exponent.as_slice());
+
+    let mut wiener_stats = WienerStatistics {
+        checked: policy.enable_wiener_attack_check,
+        convergents_tested: 0,
+        vulnerable: false,
+        recovered_d_bits: None,
+        recovered_p_bits: None,
+        recovered_q_bits: None,
+    };
+
+    let mut short_sleeve_stats = Vec::new();
 
     if bit_len < policy.minimum_modulus_bits {
         findings.push(Finding::new(
@@ -205,7 +220,16 @@ pub fn analyze_material(material: &PublicKeyMaterial, policy: &AuditPolicy<'_>) 
     }
 
     if policy.enable_wiener_attack_check {
-        if let Some(result) = wiener::wiener_attack(&n_big, &e_big) {
+        let check = wiener::wiener_check(&n_big, &e_big);
+
+        wiener_stats.convergents_tested = check.convergents_tested;
+
+        if let Some(result) = check.result {
+            wiener_stats.vulnerable = true;
+            wiener_stats.recovered_d_bits = Some(result.d.bits());
+            wiener_stats.recovered_p_bits = Some(result.p.bits());
+            wiener_stats.recovered_q_bits = Some(result.q.bits());
+
             findings.push(Finding::new(
                 TestId::WienerSmallPrivateExponent,
                 FindingSeverity::Critical,
@@ -225,24 +249,37 @@ pub fn analyze_material(material: &PublicKeyMaterial, policy: &AuditPolicy<'_>) 
     }
 
     for limb_bits in policy.short_sleeve_limb_bits {
-        if let Some(hit) = short_sleeve::scan_short_sleeve_pattern(
+        let scan = short_sleeve::scan_short_sleeve_statistics(
             material.modulus.as_slice(),
             *limb_bits,
             policy.short_sleeve_max_nonzero_bytes_per_limb,
             policy.short_sleeve_minimum_sparse_ratio,
-        ) {
+        );
+
+        if scan.finding_triggered {
             findings.push(Finding::new(
                 TestId::ShortSleeveRsaPattern,
                 FindingSeverity::High,
                 format!(
                     "RSA modulus has sparse limb pattern consistent with short-sleeve RSA: \
                      {} sparse limbs out of {} at {}-bit limb width",
-                    hit.sparse_limbs, hit.limbs, hit.limb_bits
+                    scan.sparse_limbs, scan.limbs, scan.limb_bits
                 ),
-                FindingEvidence::new("sparse_ratio", format!("{:.6}", hit.sparse_ratio)),
+                FindingEvidence::new("sparse_ratio", format!("{:.6}", scan.sparse_ratio)),
             ));
         }
+
+        short_sleeve_stats.push(ShortSleeveStatistics {
+            limb_bits: scan.limb_bits,
+            limbs: scan.limbs,
+            sparse_limbs: scan.sparse_limbs,
+            sparse_ratio: scan.sparse_ratio,
+            max_nonzero_bytes_per_limb: scan.max_nonzero_bytes_per_limb,
+            minimum_sparse_ratio: scan.minimum_sparse_ratio,
+            finding_triggered: scan.finding_triggered,
+        });
     }
+
     let status = HealthStatus::from_findings(&findings);
     let spki_sha256 = Sha256::digest(material.subject_public_key_der.as_slice());
 
@@ -260,6 +297,8 @@ pub fn analyze_material(material: &PublicKeyMaterial, policy: &AuditPolicy<'_>) 
         longest_zero_run_bits: longest_zero_run,
         longest_one_run_bits: longest_one_run,
         findings,
+        wiener: wiener_stats,
+        short_sleeve: short_sleeve_stats,
         compliance: compliance_controls(),
     }
 }

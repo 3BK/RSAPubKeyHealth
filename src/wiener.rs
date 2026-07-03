@@ -15,19 +15,35 @@ pub struct WienerAttackResult {
     pub q: BigUint,
 }
 
-/// Attempt Wiener's attack against public RSA values.
+/// Result of running the Wiener small-private-exponent check.
+#[derive(Debug, Clone)]
+pub struct WienerCheck {
+    /// Number of continued-fraction convergents evaluated.
+    pub convergents_tested: usize,
+
+    /// Recovered vulnerable key material, if the attack succeeded.
+    pub result: Option<WienerAttackResult>,
+}
+
+/// Run Wiener's small-private-exponent check against public RSA values.
 ///
-/// This should only succeed for vulnerable RSA keys with unusually small
-/// private exponents. Normal RSA keys should return `None`.
+/// Normal RSA keys should return `result: None`.
 #[must_use]
-pub fn wiener_attack(n: &BigUint, e: &BigUint) -> Option<WienerAttackResult> {
+pub fn wiener_check(n: &BigUint, e: &BigUint) -> WienerCheck {
+    let mut convergents_tested = 0usize;
+
     if n.is_zero() || e.is_zero() {
-        return None;
+        return WienerCheck {
+            convergents_tested,
+            result: None,
+        };
     }
 
     let cf = continued_fraction(e.clone(), n.clone());
 
     for (k, d) in convergents(&cf) {
+        convergents_tested += 1;
+
         if k.is_zero() || d.is_zero() {
             continue;
         }
@@ -46,15 +62,6 @@ pub fn wiener_attack(n: &BigUint, e: &BigUint) -> Option<WienerAttackResult> {
 
         let phi = &ed_minus_one / &k;
 
-        /*
-         * For RSA:
-         *
-         *   phi(n) = n - (p + q) + 1
-         *   s      = p + q = n - phi(n) + 1
-         *
-         * Invalid continued-fraction candidates can produce phi > n + 1.
-         * Since BigUint cannot represent negative values, skip those.
-         */
         let n_plus_one = n + BigUint::one();
 
         if phi > n_plus_one {
@@ -63,18 +70,6 @@ pub fn wiener_attack(n: &BigUint, e: &BigUint) -> Option<WienerAttackResult> {
 
         let s = &n_plus_one - &phi;
 
-        /*
-         * We solve:
-         *
-         *   x² - s*x + n = 0
-         *
-         * Discriminant:
-         *
-         *   Δ = s² - 4n
-         *
-         * Invalid candidates often have s² < 4n. BigUint cannot represent a
-         * negative discriminant, so compare first and skip.
-         */
         let s_squared = &s * &s;
         let four_n = n << 2usize;
 
@@ -100,11 +95,17 @@ pub fn wiener_attack(n: &BigUint, e: &BigUint) -> Option<WienerAttackResult> {
         }
 
         if &p * &q == *n {
-            return Some(WienerAttackResult { d, p, q });
+            return WienerCheck {
+                convergents_tested,
+                result: Some(WienerAttackResult { d, p, q }),
+            };
         }
     }
 
-    None
+    WienerCheck {
+        convergents_tested,
+        result: None,
+    }
 }
 
 fn continued_fraction(mut numerator: BigUint, mut denominator: BigUint) -> Vec<BigUint> {

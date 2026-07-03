@@ -39,6 +39,7 @@ pub struct PublicKeyMaterial {
 /// custom PKCS#1 parser because `rsa::RsaPublicKey::from_pkcs1_pem` may reject
 /// keys larger than the crate's default public-key size limit.
 pub fn parse_rsa_public_key_pem(input: &str) -> Result<PublicKeyMaterial, KeyHealthError> {
+    #[cfg(test)]
     eprintln!(
         "[DEBUG] First PEM line: {}",
         input.lines().next().unwrap_or("<empty>")
@@ -48,12 +49,14 @@ pub fn parse_rsa_public_key_pem(input: &str) -> Result<PublicKeyMaterial, KeyHea
 
     match RsaPublicKey::from_public_key_pem(input) {
         Ok(key) => {
+            #[cfg(test)]
             eprintln!("[DEBUG] SPKI PEM parser succeeded");
             return material_from_key(&key);
         }
 
-        Err(spki_err) => {
-            eprintln!("[DEBUG] SPKI PEM parser failed: {spki_err}");
+        Err(_spki_err) => {
+            #[cfg(test)]
+            eprintln!("[DEBUG] SPKI PEM parser failed: {_spki_err}");
         }
     }
 
@@ -61,6 +64,7 @@ pub fn parse_rsa_public_key_pem(input: &str) -> Result<PublicKeyMaterial, KeyHea
 
     match RsaPublicKey::from_pkcs1_pem(input) {
         Ok(key) => {
+            #[cfg(test)]
             eprintln!(
                 "[DEBUG] Standard PKCS#1 PEM parser succeeded: {} bits",
                 key.n().bits()
@@ -69,11 +73,13 @@ pub fn parse_rsa_public_key_pem(input: &str) -> Result<PublicKeyMaterial, KeyHea
             return material_from_key(&key);
         }
 
-        Err(pkcs1_err) => {
-            eprintln!("[DEBUG] Standard PKCS#1 PEM parser failed: {pkcs1_err}");
+        Err(_pkcs1_err) => {
+            #[cfg(test)]
+            eprintln!("[DEBUG] Standard PKCS#1 PEM parser failed: {_pkcs1_err}");
         }
     }
 
+    #[cfg(test)]
     eprintln!("[DEBUG] Trying custom large-key PKCS#1 PEM parser");
 
     match pkcs1_pem_to_der(input) {
@@ -95,23 +101,28 @@ pub fn parse_rsa_public_key_pem(input: &str) -> Result<PublicKeyMaterial, KeyHea
 /// For large RSA public keys, such as RSA-7680, this function falls back to a
 /// custom PKCS#1 DER parser using `RsaPublicKey::new_with_max_size`.
 pub fn parse_rsa_public_key_der(input: &[u8]) -> Result<PublicKeyMaterial, KeyHealthError> {
+    #[cfg(test)]
     eprintln!("[DEBUG] Trying SPKI DER parser");
 
     match RsaPublicKey::from_public_key_der(input) {
         Ok(key) => {
+            #[cfg(test)]
             eprintln!("[DEBUG] SPKI DER parser succeeded");
             return material_from_key(&key);
         }
 
-        Err(spki_err) => {
-            eprintln!("[DEBUG] SPKI DER parser failed: {spki_err}");
+        Err(_spki_err) => {
+            #[cfg(test)]
+            eprintln!("[DEBUG] SPKI DER parser failed: {_spki_err}");
         }
     }
 
+    #[cfg(test)]
     eprintln!("[DEBUG] Trying standard PKCS#1 DER parser");
 
     match RsaPublicKey::from_pkcs1_der(input) {
         Ok(key) => {
+            #[cfg(test)]
             eprintln!(
                 "[DEBUG] Standard PKCS#1 DER parser succeeded: {} bits",
                 key.n().bits()
@@ -120,11 +131,13 @@ pub fn parse_rsa_public_key_der(input: &[u8]) -> Result<PublicKeyMaterial, KeyHe
             return material_from_key(&key);
         }
 
-        Err(pkcs1_err) => {
-            eprintln!("[DEBUG] Standard PKCS#1 DER parser failed: {pkcs1_err}");
+        Err(_pkcs1_err) => {
+            #[cfg(test)]
+            eprintln!("[DEBUG] Standard PKCS#1 DER parser failed: {_pkcs1_err}");
         }
     }
 
+    #[cfg(test)]
     eprintln!("[DEBUG] Trying custom large-key PKCS#1 DER parser");
 
     parse_rsa_public_key_pkcs1_der_large(input)

@@ -194,6 +194,55 @@ impl Finding {
     }
 }
 
+/// Wiener small-private-exponent check summary.
+#[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct WienerStatistics {
+    /// Whether the Wiener check was enabled by policy.
+    pub checked: bool,
+
+    /// Number of continued-fraction convergents evaluated.
+    pub convergents_tested: usize,
+
+    /// Whether a vulnerable private exponent was recovered.
+    pub vulnerable: bool,
+
+    /// Recovered private exponent bit length, if vulnerable.
+    pub recovered_d_bits: Option<u64>,
+
+    /// Recovered p bit length, if vulnerable.
+    pub recovered_p_bits: Option<u64>,
+
+    /// Recovered q bit length, if vulnerable.
+    pub recovered_q_bits: Option<u64>,
+}
+
+/// Short-sleeve sparse-limb scan summary for one limb width.
+#[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct ShortSleeveStatistics {
+    /// Limb width in bits.
+    pub limb_bits: usize,
+
+    /// Number of limbs inspected.
+    pub limbs: usize,
+
+    /// Number of sparse limbs.
+    pub sparse_limbs: usize,
+
+    /// Ratio of sparse limbs to total limbs.
+    pub sparse_ratio: f64,
+
+    /// Maximum allowed non-zero bytes per sparse limb.
+    pub max_nonzero_bytes_per_limb: usize,
+
+    /// Policy threshold for raising a finding.
+    pub minimum_sparse_ratio: f64,
+
+    /// Whether this scan exceeded the finding threshold.
+    pub finding_triggered: bool,
+}
+
 /// Health report suitable for JSON serialization and audit attachment.
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -224,6 +273,13 @@ pub struct HealthReport {
     pub longest_one_run_bits: usize,
     /// Findings.
     pub findings: Vec<Finding>,
+
+    /// Wiener small-private-exponent check summary.
+    pub wiener: WienerStatistics,
+
+    /// Short-sleeve / sparse-limb RSA scan summaries.
+    pub short_sleeve: Vec<ShortSleeveStatistics>,
+
     /// Compliance support mapping.
     pub compliance: Vec<ComplianceControl>,
 }

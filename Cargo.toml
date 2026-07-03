@@ -1,0 +1,36 @@
+
+
+[package]
+name = "rsa_pub_key_health"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+license = "MIT OR Apache-2.0"
+description = "Audit-oriented RSA public key health checks: bit balance, entropy, monobit, runs, sparse modulus, repeated blocks, exponent sanity, and shared-factor screening."
+repository = "https://github/3bk/RSAPubKeyHealth"
+readme = "README.md"
+keywords = ["rsa", "cryptography", "audit", "entropy", "compliance"]
+categories = ["cryptography", "command-line-utilities"]
+
+[lib]
+name = "rsa_pub_key_health"
+path = "src/lib.rs"
+
+[dependencies]
+rsa = { version = "0.9", features = ["pem"] }
+sha2 = "0.10"
+serde = { version = "1", features = ["derive"], optional = true }
+serde_json = { version = "1", optional = true }
+thiserror = "1"
+zeroize = "1"
+num-bigint = "0.4"
+num-integer = "0.1"
+num-traits = "0.2"
+
+[dev-dependencies]
+rand = "0.8"
+
+[features]
+default = ["std", "serde"]
+std = []
+serde = ["dep:serde", "dep:serde_json"]

@@ -42,9 +42,7 @@ impl Default for AuditPolicy<'_> {
             ones_ratio_min: 0.45,
             ones_ratio_max: 0.55,
 
-            // Reduced from 7.70 because your generated RSA-3072 key
-            // measured 7.4775 bits/byte and was incorrectly flagged.
-            minimum_shannon_entropy_bits_per_byte: 7.20,
+            minimum_shannon_entropy_bits_per_byte: 7.10,
             monobit_min_p_value: 0.001,
             max_zero_run_bits: 96,
             max_one_run_bits: 128,

@@ -42,7 +42,7 @@ impl Default for AuditPolicy<'_> {
             ones_ratio_min: 0.45,
             ones_ratio_max: 0.55,
 
-            minimum_shannon_entropy_bits_per_byte: 7.10,
+            minimum_shannon_entropy_bits_per_byte: 7.39,
             monobit_min_p_value: 0.001,
             max_zero_run_bits: 96,
             max_one_run_bits: 128,
@@ -118,7 +118,7 @@ impl<'a> AuditPolicy<'a> {
             ones_ratio_min: 0.44,
             ones_ratio_max: 0.555555,
 
-            minimum_shannon_entropy_bits_per_byte: 7.30,
+            minimum_shannon_entropy_bits_per_byte: 7.55,
 
             // Statistical sanity check.
             monobit_min_p_value: 0.001,
@@ -157,7 +157,7 @@ impl<'a> AuditPolicy<'a> {
             ones_ratio_min: 0.45,
             ones_ratio_max: 0.55,
 
-            minimum_shannon_entropy_bits_per_byte: 7.40,
+            minimum_shannon_entropy_bits_per_byte: 7.77,
 
             // Statistical sanity check.
             monobit_min_p_value: 0.001,

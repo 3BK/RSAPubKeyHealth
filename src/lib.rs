@@ -18,7 +18,7 @@ mod parser;
 mod report;
 mod tests;
 
-pub use parser::{parse_rsa_public_key_der, parse_rsa_public_key_pem, PublicKeyMaterial};
+pub use parser::{PublicKeyMaterial, parse_rsa_public_key_der, parse_rsa_public_key_pem};
 pub use report::{ComplianceControl, Finding, FindingSeverity, HealthReport, HealthStatus, TestId};
 pub use tests::{AuditPolicy, SharedFactorFinding};
 
@@ -44,14 +44,26 @@ pub fn analyze_material(material: &PublicKeyMaterial, policy: &AuditPolicy<'_>) 
     let bit_len = material.modulus_bit_len;
     let ones = math::count_ones(n, bit_len);
     let zeros = bit_len.saturating_sub(ones);
-    let ones_ratio = if bit_len == 0 { 0.0 } else { ones as f64 / bit_len as f64 };
+    let ones_ratio = if bit_len == 0 {
+        0.0
+    } else {
+        ones as f64 / bit_len as f64
+    };
     let entropy = math::shannon_entropy(n);
     let monobit = math::monobit_z_score(bit_len, ones);
     let monobit_p = math::two_sided_normal_p_value(monobit.abs());
     let longest_zero_run = math::longest_bit_run(n, bit_len, false);
     let longest_one_run = math::longest_bit_run(n, bit_len, true);
-    let repeated_block = math::repeated_block_report(n, policy.repeated_block_size, policy.repeated_block_min_count);
-    let sparse = math::sparse_window_report(n, policy.sparse_window_bytes, policy.sparse_window_max_nonzero_bytes);
+    let repeated_block = math::repeated_block_report(
+        n,
+        policy.repeated_block_size,
+        policy.repeated_block_min_count,
+    );
+    let sparse = math::sparse_window_report(
+        n,
+        policy.sparse_window_bytes,
+        policy.sparse_window_max_nonzero_bytes,
+    );
     let small_factor = math::small_factor_screen(n, policy.small_factor_limit);
     let fermat = math::fermat_near_square_screen(n, policy.fermat_iterations);
     let shared = tests::shared_factor_scan(n, policy.shared_moduli);
@@ -60,7 +72,10 @@ pub fn analyze_material(material: &PublicKeyMaterial, policy: &AuditPolicy<'_>) 
         findings.push(Finding::new(
             TestId::ModulusSize,
             FindingSeverity::High,
-            format!("RSA modulus is {bit_len} bits; policy minimum is {} bits", policy.minimum_modulus_bits),
+            format!(
+                "RSA modulus is {bit_len} bits; policy minimum is {} bits",
+                policy.minimum_modulus_bits
+            ),
             FindingEvidence::new("modulus_bits", bit_len.to_string()),
         ));
     }
@@ -69,7 +84,8 @@ pub fn analyze_material(material: &PublicKeyMaterial, policy: &AuditPolicy<'_>) 
         findings.push(Finding::new(
             TestId::PublicExponent,
             FindingSeverity::Medium,
-            "Public exponent is not 65537; verify this is intentional and accepted by policy".to_string(),
+            "Public exponent is not 65537; verify this is intentional and accepted by policy"
+                .to_string(),
             FindingEvidence::new("exponent_hex", math::hex(material.exponent.as_slice())),
         ));
     }
@@ -78,7 +94,10 @@ pub fn analyze_material(material: &PublicKeyMaterial, policy: &AuditPolicy<'_>) 
         findings.push(Finding::new(
             TestId::BitBalance,
             FindingSeverity::High,
-            format!("Modulus bit balance is outside policy range: {:.4}% ones", ones_ratio * 100.0),
+            format!(
+                "Modulus bit balance is outside policy range: {:.4}% ones",
+                ones_ratio * 100.0
+            ),
             FindingEvidence::new("ones_ratio", format!("{ones_ratio:.8}")),
         ));
     }
@@ -105,7 +124,10 @@ pub fn analyze_material(material: &PublicKeyMaterial, policy: &AuditPolicy<'_>) 
         findings.push(Finding::new(
             TestId::LongZeroRun,
             FindingSeverity::High,
-            format!("Longest zero run is {longest_zero_run} bits; threshold is {}", policy.max_zero_run_bits),
+            format!(
+                "Longest zero run is {longest_zero_run} bits; threshold is {}",
+                policy.max_zero_run_bits
+            ),
             FindingEvidence::new("longest_zero_run_bits", longest_zero_run.to_string()),
         ));
     }
@@ -114,7 +136,10 @@ pub fn analyze_material(material: &PublicKeyMaterial, policy: &AuditPolicy<'_>) 
         findings.push(Finding::new(
             TestId::LongOneRun,
             FindingSeverity::Medium,
-            format!("Longest one run is {longest_one_run} bits; threshold is {}", policy.max_one_run_bits),
+            format!(
+                "Longest one run is {longest_one_run} bits; threshold is {}",
+                policy.max_one_run_bits
+            ),
             FindingEvidence::new("longest_one_run_bits", longest_one_run.to_string()),
         ));
     }
@@ -123,7 +148,10 @@ pub fn analyze_material(material: &PublicKeyMaterial, policy: &AuditPolicy<'_>) 
         findings.push(Finding::new(
             TestId::RepeatedBlocks,
             FindingSeverity::High,
-            format!("Repeated {}-byte block appears {} times", r.block_size, r.count),
+            format!(
+                "Repeated {}-byte block appears {} times",
+                r.block_size, r.count
+            ),
             FindingEvidence::new("block_hex", math::hex(&r.block)),
         ));
     }
@@ -132,7 +160,10 @@ pub fn analyze_material(material: &PublicKeyMaterial, policy: &AuditPolicy<'_>) 
         findings.push(Finding::new(
             TestId::SparseWindow,
             FindingSeverity::High,
-            format!("Sparse {}-byte window found with {} non-zero bytes", s.window_bytes, s.nonzero_bytes),
+            format!(
+                "Sparse {}-byte window found with {} non-zero bytes",
+                s.window_bytes, s.nonzero_bytes
+            ),
             FindingEvidence::new("offset", s.offset.to_string()),
         ));
     }
@@ -159,7 +190,10 @@ pub fn analyze_material(material: &PublicKeyMaterial, policy: &AuditPolicy<'_>) 
         findings.push(Finding::new(
             TestId::SharedFactor,
             FindingSeverity::Critical,
-            format!("Modulus shares a non-trivial factor with corpus entry {}", s.index),
+            format!(
+                "Modulus shares a non-trivial factor with corpus entry {}",
+                s.index
+            ),
             FindingEvidence::new("gcd_hex", math::hex(&s.gcd_be)),
         ));
     }
@@ -189,10 +223,26 @@ pub fn analyze_material(material: &PublicKeyMaterial, policy: &AuditPolicy<'_>) 
 /// a claim of full compliance or certification.
 pub fn compliance_controls() -> Vec<ComplianceControl> {
     vec![
-        ComplianceControl::new(Framework::PciDss40, "Req. 3/4/12", "Supports cryptographic key/certificate inventory quality evidence, transmission protection review, and repeatable security testing evidence."),
-        ComplianceControl::new(Framework::NistSp80053Rev5, "SC-12, SC-13, SI-7, RA-5, CA-7, AU-12", "Supports cryptographic key establishment/management review, cryptographic protection review, integrity checking, vulnerability monitoring, continuous monitoring, and audit record generation."),
-        ComplianceControl::new(Framework::CisControlsV8, "3, 4, 8", "Supports data protection, secure configuration evidence, and audit logging / monitoring evidence for cryptographic assets."),
-        ComplianceControl::new(Framework::DisaStig, "Application Security and Development STIG cryptography findings", "Supports evidence that cryptographic use is reviewed, documented, and commensurate with data protection requirements."),
+        ComplianceControl::new(
+            Framework::PciDss40,
+            "Req. 3/4/12",
+            "Supports cryptographic key/certificate inventory quality evidence, transmission protection review, and repeatable security testing evidence.",
+        ),
+        ComplianceControl::new(
+            Framework::NistSp80053Rev5,
+            "SC-12, SC-13, SI-7, RA-5, CA-7, AU-12",
+            "Supports cryptographic key establishment/management review, cryptographic protection review, integrity checking, vulnerability monitoring, continuous monitoring, and audit record generation.",
+        ),
+        ComplianceControl::new(
+            Framework::CisControlsV8,
+            "3, 4, 8",
+            "Supports data protection, secure configuration evidence, and audit logging / monitoring evidence for cryptographic assets.",
+        ),
+        ComplianceControl::new(
+            Framework::DisaStig,
+            "Application Security and Development STIG cryptography findings",
+            "Supports evidence that cryptographic use is reviewed, documented, and commensurate with data protection requirements.",
+        ),
     ]
 }
 

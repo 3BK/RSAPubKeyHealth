@@ -27,7 +27,11 @@ pub struct ComplianceControl {
 impl ComplianceControl {
     /// Construct a compliance mapping.
     pub fn new(framework: Framework, control: &str, evidence: &str) -> Self {
-        Self { framework, control: control.to_string(), evidence: evidence.to_string() }
+        Self {
+            framework,
+            control: control.to_string(),
+            evidence: evidence.to_string(),
+        }
     }
 }
 
@@ -48,9 +52,20 @@ pub enum HealthStatus {
 impl HealthStatus {
     /// Derive overall status from findings.
     pub fn from_findings(findings: &[Finding]) -> Self {
-        if findings.iter().any(|f| f.severity == FindingSeverity::Critical) { return Self::Critical; }
-        if findings.iter().any(|f| f.severity == FindingSeverity::High) { return Self::Fail; }
-        if findings.is_empty() { Self::Pass } else { Self::Review }
+        if findings
+            .iter()
+            .any(|f| f.severity == FindingSeverity::Critical)
+        {
+            return Self::Critical;
+        }
+        if findings.iter().any(|f| f.severity == FindingSeverity::High) {
+            return Self::Fail;
+        }
+        if findings.is_empty() {
+            Self::Pass
+        } else {
+            Self::Review
+        }
     }
 }
 
@@ -112,7 +127,12 @@ pub struct FindingEvidence {
 
 impl FindingEvidence {
     /// Build evidence.
-    pub fn new(name: &str, value: String) -> Self { Self { name: name.to_string(), value } }
+    pub fn new(name: &str, value: String) -> Self {
+        Self {
+            name: name.to_string(),
+            value,
+        }
+    }
 }
 
 /// A single audit finding.
@@ -131,8 +151,18 @@ pub struct Finding {
 
 impl Finding {
     /// Build a finding.
-    pub fn new(test_id: TestId, severity: FindingSeverity, message: String, evidence: FindingEvidence) -> Self {
-        Self { test_id, severity, message, evidence }
+    pub fn new(
+        test_id: TestId,
+        severity: FindingSeverity,
+        message: String,
+        evidence: FindingEvidence,
+    ) -> Self {
+        Self {
+            test_id,
+            severity,
+            message,
+            evidence,
+        }
     }
 }
 
